@@ -1,0 +1,103 @@
+import numpy as np
+import matplotlib
+import matplotlib.pyplot as plt
+from math import *
+from sklearn.svm import SVC
+from sklearn.preprocessing import StandardScaler
+
+data = np.loadtxt('svmData.csv', delimiter=',')
+
+X_data = np.delete(data, 2, axis=1)
+y = np.delete(data, [0, 1], axis=1)
+
+X = StandardScaler().fit_transform(X_data)
+
+const_C = [1, 5, 10, 30, 50, 100]
+const_gamma = [0.01, 0.1, 0.5, 1, 5, 10]
+
+br_er = [[0 for i in range(len(const_C))] for j in range(len(const_gamma))]
+
+for i in range(0, len(const_C)):
+    for j in range(0, len(const_gamma)):
+        clf = SVC(C=const_C[i], kernel='rbf', gamma=const_gamma[j])
+        clf.fit(X, y.ravel())
+
+        b = clf.intercept_
+        supp_vec = clf.support_vectors_
+        alphas = np.abs(clf.dual_coef_)
+
+        for k in range(0, len(supp_vec)):
+            if (const_C[i] == alphas[0][k]):
+                br_er[i][j] += 1
+
+
+def column(matrix, i):
+    return [row[i] for row in matrix]
+
+
+for i in range(0, len(const_gamma)):
+    plt.scatter(const_C, column(br_er, i))
+    plt.xlabel('C')
+    plt.ylabel('Number of errors for gamma = ' + str(const_gamma[i]))
+    plt.show()
+
+gamma_opt = 0.5
+C_opt = 50
+clf = SVC(C=C_opt, kernel='rbf', gamma=gamma_opt)
+clf.fit(X, y.ravel())
+
+print('b = ', clf.intercept_)
+print('Indices of support vectors = ', clf.support_)
+print('Support vectors = ', clf.support_vectors_)
+print('Number of support vectors for each class = ', clf.n_support_)
+print('Coefficients of the support vector in the decision function = ', np.abs(clf.dual_coef_))
+
+b = clf.intercept_
+indeksi = clf.support_
+supp_vec = clf.support_vectors_
+alphas = np.abs(clf.dual_coef_)
+
+colors = []
+boja_kruga = []
+
+for i in range(len(X)):
+    is_support_vector = False
+    for j in range(len(supp_vec)):
+        if np.array_equal(X[i], supp_vec[j]):
+            is_support_vector = True
+            break
+
+    if is_support_vector:
+        if y[i][0] == 1:
+            colors.append('red')
+            boja_kruga.append('black')
+        elif y[i][0] == -1:
+            colors.append('cyan')
+            boja_kruga.append('black')
+    else:
+        if y[i][0] == 1:
+            colors.append('red')
+            boja_kruga.append('red')
+        elif y[i][0] == -1:
+            colors.append('cyan')
+            boja_kruga.append('cyan')
+
+
+xmin = -2
+xmax = 2
+ymin = -2
+ymax = 2
+
+def plot_decision_boundary(clf, xmin, xmax, ymin, ymax):
+    xx, yy = np.meshgrid(np.linspace(xmin, xmax, num=100, endpoint=True),
+                         np.linspace(ymin, ymax, num=100, endpoint=True))
+    Z = clf.predict(np.c_[xx.ravel(), yy.ravel()])
+    Z = Z.reshape(xx.shape)
+    cs = plt.contourf(xx, yy, Z, alpha=0.2, cmap='bwr')
+
+
+plt.scatter(X[:, 0], X[:, 1], c=y.ravel(), alpha=0.9, cmap=matplotlib.colors.ListedColormap(colors), edgecolors=boja_kruga)
+plot_decision_boundary(clf, xmin, xmax, ymin, ymax)
+plt.xlabel('x1')
+plt.ylabel('x2')
+plt.show()
